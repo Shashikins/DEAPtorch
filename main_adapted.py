@@ -5,7 +5,7 @@ import torch.optim as optim
 from torchvision import datasets, transforms
 from torch.optim.lr_scheduler import StepLR
 
-from pyraGen import optimize_hyperparameters
+from DEAPtorch import optimize_hyperparameters
 
 class Net(nn.Module):
     def __init__(self):
