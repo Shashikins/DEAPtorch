@@ -13,9 +13,24 @@ def setup_toolbox(learning_rate_min, learning_rate_max):
     toolbox.register("population", tools.initRepeat, list, toolbox.individual)
     return toolbox
 
-def register_operators(toolbox):
+def checkBounds(min, max):
+    def decorator(func):
+        def wrapper(*args, **kargs):
+            offspring = func(*args, **kargs)
+            for child in offspring:
+                for i in range(len(child)):
+                    if child[i] < min[i]:
+                        child[i] = min[i]
+                    elif child[i] > max[i]:
+                        child[i] = max[i]
+            return offspring
+        return wrapper
+    return decorator
+
+def register_operators(toolbox, learning_rate_min, learning_rate_max):
     toolbox.register("mate", tools.cxBlend, alpha=0.5)
-    toolbox.register("mutate", tools.mutGaussian, mu=0, sigma=0.001, indpb=0.2)
+    toolbox.register("mutate", tools.mutGaussian, mu=0, sigma=1, indpb=0.2)
+    toolbox.decorate("mutate", checkBounds([learning_rate_min], [learning_rate_max]))
     toolbox.register("select", tools.selTournament, tournsize=3)
 
 def eval_individual(individual, eval_func):
@@ -23,7 +38,7 @@ def eval_individual(individual, eval_func):
     performance = eval_func({'learning_rate': learning_rate})
     return performance
 
-def optimize_hyperparameters(hyperparam_space, eval_func, ngen=2, pop_size=2):
+def optimize_hyperparameters(hyperparam_space, eval_func, ngen=5, pop_size=10):
     """
     Processes the hyperparameters in the given dictionary. For each parameter,
     it applies specific processing rules. For example, for 'learning_rate',

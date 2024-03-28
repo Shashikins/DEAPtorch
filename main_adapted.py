@@ -87,6 +87,8 @@ def train_and_evaluate(best_hyperparams):
         device = torch.device("mps")
     else:
         device = torch.device("cpu")
+        
+    print(device)
 
     train_kwargs = {'batch_size': hyperparams['batch_size']}
     test_kwargs = {'batch_size': hyperparams['test_batch_size']}
@@ -127,7 +129,7 @@ hyperparam_space = {
 
 def main():
     
-    best_hyperparams = optimize_hyperparameters(hyperparam_space, train_and_evaluate)
+    best_hyperparams = optimize_hyperparameters(hyperparam_space, train_and_evaluate, 5, 10)
     print(best_hyperparams)
 
     #example hyperparameters
