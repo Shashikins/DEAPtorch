@@ -24,10 +24,10 @@ def checkBounds(hyperparam_space):
             for child in offspring:
                 for i, name in enumerate(hyperparam_space):
                     min_val, max_val = hyperparam_space[name]
-                    if child[i] < min_val:
-                        child[i] = min_val
-                    elif child[i] > max_val:
-                        child[i] = max_val
+                    range_val = max_val - min_val
+                    #modulo operation to handle out-of-bounds with wrapping
+                    if child[i] < min_val or child[i] > max_val:
+                        child[i] = min_val + (child[i] - min_val) % range_val
             return offspring
         return wrapper
     return decorator
