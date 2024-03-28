@@ -4,8 +4,8 @@ import numpy
 import matplotlib.pyplot as plt
 
 def setup_creator():
-    creator.create("FitnessMax", base.Fitness, weights=(1.0,))
-    creator.create("Individual", list, fitness=creator.FitnessMax)
+    creator.create("FitnessMulti", base.Fitness, weights=(1.0,-1.0))
+    creator.create("Individual", list, fitness=creator.FitnessMulti)
 
 def setup_toolbox(hyperparam_space):
     toolbox = base.Toolbox()
@@ -87,7 +87,10 @@ def optimize_hyperparameters(hyperparam_space, eval_func, ngen=5, pop_size=10):
     
     _, logbook = algorithms.eaSimple(pop, toolbox, cxpb=0.5, mutpb=0.2, ngen=ngen, stats=stats, halloffame=hof, verbose=True)
     
-    with open("/mnt/data/ga_optimization_stats.csv", "w") as stats_file:
+    directory = '/stats/'
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+    with open("/stats/ga_optimization_stats.csv", "w") as stats_file:
         headers = "generation, avg, min, max\n"
         stats_file.write(headers)
         for gen, record in enumerate(logbook):

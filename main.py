@@ -63,7 +63,7 @@ def test(model, device, test_loader):
         test_loss, correct, len(test_loader.dataset),
         100. * correct / len(test_loader.dataset)))
     accuracy = 100. * correct / len(test_loader.dataset)
-    return (accuracy,) #or more in the tuple
+    return (accuracy, test_loss) #must be a tuple
 
 def train_and_evaluate(best_hyperparams):
     
@@ -124,12 +124,14 @@ def train_and_evaluate(best_hyperparams):
 
 hyperparam_space = {
     'learning_rate': (0.001, 0.1),
+    'momentum': (0.8, 0.95),
+    'epochs': (10, 20),
     #other parameters later
 }
 
 def main():
     
-    best_hyperparams = optimize_hyperparameters(hyperparam_space, train_and_evaluate, ngen=2, pop_size=2)
+    best_hyperparams = optimize_hyperparameters(hyperparam_space, train_and_evaluate, ngen=2, pop_size=8)
     print(best_hyperparams)
 
 if __name__ == '__main__':
