@@ -70,10 +70,10 @@ def train_and_evaluate(best_hyperparams):
     hyperparams = {
         'batch_size': 64,
         'test_batch_size': 1000,
-        'epochs': 14,
+        'epochs': best_hyperparams['epochs'],
         'lr': best_hyperparams['learning_rate'],
         'gamma': 0.7,
-        'momentum': 0.9
+        'momentum': best_hyperparams['momentum']
     }
     
     use_cuda = torch.cuda.is_available()

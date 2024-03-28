@@ -2,6 +2,7 @@ from deap import base, creator, tools, algorithms
 import random
 import numpy
 import matplotlib.pyplot as plt
+import os
 
 def setup_creator():
     creator.create("FitnessMulti", base.Fitness, weights=(1.0,-1.0))
