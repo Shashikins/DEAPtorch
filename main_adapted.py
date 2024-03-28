@@ -63,9 +63,19 @@ def test(model, device, test_loader):
         test_loss, correct, len(test_loader.dataset),
         100. * correct / len(test_loader.dataset)))
     accuracy = 100. * correct / len(test_loader.dataset)
-    return accuracy #alternatively, return test_loss, accuracy   
+    return (accuracy,) #or more in the tuple
 
-def train_and_evaluate(batch_size=64, test_batch_size=1000, epochs=14, lr=1.0, gamma=0.7):
+def train_and_evaluate(best_hyperparams):
+    
+    hyperparams = {
+        'batch_size': 64,
+        'test_batch_size': 1000,
+        'epochs': 14,
+        'lr': best_hyperparams['learning_rate'],
+        'gamma': 0.7,
+        'momentum': 0.9
+    }
+    
     use_cuda = torch.cuda.is_available()
     use_mps = torch.backends.mps.is_available()
     
@@ -78,8 +88,8 @@ def train_and_evaluate(batch_size=64, test_batch_size=1000, epochs=14, lr=1.0, g
     else:
         device = torch.device("cpu")
 
-    train_kwargs = {'batch_size': batch_size}
-    test_kwargs = {'batch_size': test_batch_size}
+    train_kwargs = {'batch_size': hyperparams['batch_size']}
+    test_kwargs = {'batch_size': hyperparams['test_batch_size']}
     if use_cuda:
         cuda_kwargs = {'num_workers': 1,
                        'pin_memory': True,
@@ -99,18 +109,19 @@ def train_and_evaluate(batch_size=64, test_batch_size=1000, epochs=14, lr=1.0, g
     test_loader = torch.utils.data.DataLoader(dataset2, **test_kwargs)
 
     model = Net().to(device)
-    optimizer = optim.Adadelta(model.parameters(), lr=lr)
-    scheduler = StepLR(optimizer, step_size=1, gamma=gamma)
+    optimizer = optim.SGD(model.parameters(), lr=hyperparams['lr'], momentum=hyperparams['momentum'])
 
-    for epoch in range(1, epochs + 1):
+    scheduler = StepLR(optimizer, step_size=1, gamma=hyperparams['gamma'])
+
+    for epoch in range(1, hyperparams['epochs'] + 1):
         train(model, device, train_loader, optimizer, epoch)  #add log_interval here if different from 10
-        accuracy = test(model, device, test_loader) #alternatively, test_loss, accuracy = test(model, device, test_loader)
+        performance = test(model, device, test_loader)
         scheduler.step()
 
-    return accuracy #alternatively, return test_loss, accuracy 
+    return performance 
 
 hyperparam_space = {
-    'learning_rate': (0.5, 1.5),
+    'learning_rate': (0.001, 0.1),
     #other parameters later
 }
 
