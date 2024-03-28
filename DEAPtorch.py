@@ -56,7 +56,7 @@ def optimize_hyperparameters(hyperparam_space, eval_func, ngen=5, pop_size=10):
     
     setup_creator()
     toolbox = setup_toolbox(learning_rate_min, learning_rate_max)
-    register_operators(toolbox)
+    register_operators(toolbox, learning_rate_min, learning_rate_max)
     toolbox.register("evaluate", eval_individual, eval_func=eval_func)
     
     pop = toolbox.population(n=pop_size)
