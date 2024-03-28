@@ -88,17 +88,19 @@ def optimize_hyperparameters(hyperparam_space, eval_func, ngen=5, pop_size=10):
     
     _, logbook = algorithms.eaSimple(pop, toolbox, cxpb=0.5, mutpb=0.2, ngen=ngen, stats=stats, halloffame=hof, verbose=True)
     
+    best_hyperparams = {name: val for name, val in zip(hyperparam_names, hof[0])}
+    print(best_hyperparams)
+    
     directory = '/stats/'
     if not os.path.exists(directory):
         os.makedirs(directory)
-    with open("/stats/ga_optimization_stats.csv", "w") as stats_file:
+    with open("/stats/optimization_stats.csv", "w") as stats_file:
         headers = "generation, avg, min, max\n"
         stats_file.write(headers)
         for gen, record in enumerate(logbook):
             stats_line = f"{gen}, {record['avg']}, {record['min']}, {record['max']}\n"
             stats_file.write(stats_line)
-            
-    plot_stats(logbook)
 
-    best_hyperparams = {name: val for name, val in zip(hyperparam_names, hof[0])}
+    plot_stats(logbook)
+    
     return best_hyperparams  # Best learning rate

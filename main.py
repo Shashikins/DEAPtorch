@@ -115,7 +115,8 @@ def train_and_evaluate(best_hyperparams):
 
     scheduler = StepLR(optimizer, step_size=1, gamma=hyperparams['gamma'])
 
-    for epoch in range(1, hyperparams['epochs'] + 1):
+    import math
+    for epoch in range(1, math.floor(hyperparams['epochs']) + 1): #TODO
         train(model, device, train_loader, optimizer, epoch)  #add log_interval here if different from 10
         performance = test(model, device, test_loader)
         scheduler.step()
