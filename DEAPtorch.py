@@ -25,20 +25,17 @@ def checkBounds(hyperparam_space):
             for child in offspring:
                 for i, name in enumerate(hyperparam_space):
                     min_val, max_val = hyperparam_space[name]
-                    range_val = max_val - min_val
-                    #modulo operation to handle out-of-bounds with wrapping
-                    if child[i] < min_val or child[i] > max_val:
-                        child[i] = min_val + (child[i] - min_val) % range_val
+                    child[i] = max(min(child[i], max_val), min_val)
             return offspring
         return wrapper
     return decorator
 
 def register_operators(toolbox, hyperparam_space):
     toolbox.register("mate", tools.cxBlend, alpha=0.5)
-    toolbox.register("mutate", tools.mutGaussian, mu=0, sigma=1, indpb=0.2)
-    #apply bounds check to all hyperparameters
-    hyperparam_bounds = {name: (hp_min, hp_max) for name, (hp_min, hp_max) in hyperparam_space.items()}
-    toolbox.decorate("mutate", checkBounds(hyperparam_bounds))
+    low_bounds, high_bounds = zip(*[hyperparam_space[hp_name] for hp_name in hyperparam_space])
+    toolbox.register("mutate", tools.mutPolynomialBounded, low=low_bounds, up=high_bounds, eta=1.0, indpb=0.2)
+    #apply bounds check to all hyperparameters after crossover
+    toolbox.decorate("mate", checkBounds(hyperparam_space))
     toolbox.register("select", tools.selTournament, tournsize=3)
 
 def eval_individual(individual, eval_func, hyperparam_names):
