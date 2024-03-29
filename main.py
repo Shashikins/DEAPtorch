@@ -132,8 +132,16 @@ hyperparam_space = {
 
 def main():
     
-    best_hyperparams = optimize_hyperparameters(hyperparam_space, train_and_evaluate, ngen=3, pop_size=8)
-    print(best_hyperparams)
+    best_hyperparams = {
+        'learning_rate': 0.034720160423101325,
+        'momentum': 0.8035399974380517,
+        'epochs': 14,
+        #other parameters later
+    }
+    train_and_evaluate(best_hyperparams)
+    
+    #best_hyperparams = optimize_hyperparameters(hyperparam_space, train_and_evaluate, ngen=3, pop_size=8)
+    #print(best_hyperparams)
 
 if __name__ == '__main__':
     main()
