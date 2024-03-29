@@ -132,7 +132,7 @@ hyperparam_space = {
 
 def main():
     
-    best_hyperparams = optimize_hyperparameters(hyperparam_space, train_and_evaluate, ngen=2, pop_size=8)
+    best_hyperparams = optimize_hyperparameters(hyperparam_space, train_and_evaluate, ngen=3, pop_size=8)
     print(best_hyperparams)
 
 if __name__ == '__main__':
