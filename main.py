@@ -124,24 +124,24 @@ def train_and_evaluate(best_hyperparams):
     return performance 
 
 hyperparam_space = {
-    'learning_rate': (0.001, 0.1),
-    'momentum': (0.8, 0.95),
-    'epochs': (10, 20),
+    'learning_rate': (0.0001, 1),
+    'momentum': (0.0, 0.95),
+    'epochs': (5, 20),
     #other parameters later
 }
 
 def main():
     
-    best_hyperparams = {
-        'learning_rate': 0.034720160423101325,
-        'momentum': 0.8035399974380517,
-        'epochs': 14,
-        #other parameters later
-    }
-    train_and_evaluate(best_hyperparams)
+    #best_hyperparams = {
+        #'learning_rate': 0.034720160423101325,
+        #'momentum': 0.8035399974380517,
+        #'epochs': 14,
+        ##other parameters later
+    #}
+    #train_and_evaluate(best_hyperparams)
     
-    #best_hyperparams = optimize_hyperparameters(hyperparam_space, train_and_evaluate, ngen=3, pop_size=8)
-    #print(best_hyperparams)
+    best_hyperparams = optimize_hyperparameters(hyperparam_space, train_and_evaluate, ngen=5, pop_size=10)
+    print(best_hyperparams)
 
 if __name__ == '__main__':
     main()
