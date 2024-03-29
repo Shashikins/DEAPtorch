@@ -2,11 +2,11 @@ from deap import base, creator, tools, algorithms
 import random
 import numpy
 import matplotlib.pyplot as plt
-import os
+import pickle
 
 def setup_creator():
-    creator.create("FitnessMulti", base.Fitness, weights=(1.0,-1.0))
-    creator.create("Individual", list, fitness=creator.FitnessMulti)
+    creator.create("FitnessMax", base.Fitness, weights=(1.0,))
+    creator.create("Individual", list, fitness=creator.FitnessMax)
 
 def setup_toolbox(hyperparam_space):
     toolbox = base.Toolbox()
@@ -46,20 +46,6 @@ def eval_individual(individual, eval_func, hyperparam_names):
     performance = eval_func(hyperparams)
     return performance
 
-def plot_stats(logbook):
-    gen = logbook.select("gen")
-    max_fitness = logbook.select("max")
-    avg_fitness = logbook.select("avg")
-    min_fitness = logbook.select("min")
-
-    plt.plot(gen, max_fitness, label="Max Fitness")
-    plt.plot(gen, avg_fitness, label="Average Fitness")
-    plt.plot(gen, min_fitness, label="Min Fitness")
-    plt.xlabel("Generation")
-    plt.ylabel("Fitness")
-    plt.legend(loc="best")
-    plt.show()
-
 def optimize_hyperparameters(hyperparam_space, eval_func, ngen=5, pop_size=10):
     """
     Processes the hyperparameters in the given dictionary. 
@@ -89,18 +75,11 @@ def optimize_hyperparameters(hyperparam_space, eval_func, ngen=5, pop_size=10):
     _, logbook = algorithms.eaSimple(pop, toolbox, cxpb=0.5, mutpb=0.2, ngen=ngen, stats=stats, halloffame=hof, verbose=True)
     
     best_hyperparams = {name: val for name, val in zip(hyperparam_names, hof[0])}
-    print(best_hyperparams)
     
-    directory = '/stats/'
-    if not os.path.exists(directory):
-        os.makedirs(directory)
-    with open("/stats/optimization_stats.csv", "w") as stats_file:
-        headers = "generation, avg, min, max\n"
-        stats_file.write(headers)
-        for gen, record in enumerate(logbook):
-            stats_line = f"{gen}, {record['avg']}, {record['min']}, {record['max']}\n"
-            stats_file.write(stats_line)
-
-    plot_stats(logbook)
+    print(best_hyperparams)
+    print(logbook)
+    
+    with open("logbook.pkl", "wb") as lb_file:
+        pickle.dump(logbook, lb_file)
     
     return best_hyperparams  # Best learning rate

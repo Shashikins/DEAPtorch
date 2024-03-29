@@ -63,7 +63,7 @@ def test(model, device, test_loader):
         test_loss, correct, len(test_loader.dataset),
         100. * correct / len(test_loader.dataset)))
     accuracy = 100. * correct / len(test_loader.dataset)
-    return (accuracy, test_loss) #must be a tuple
+    return (accuracy,) #must be a tuple
 
 def train_and_evaluate(best_hyperparams):
     
