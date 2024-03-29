@@ -10,11 +10,11 @@ from DEAPtorch import optimize_hyperparameters
 class Net(nn.Module):
     def __init__(self):
         super(Net, self).__init__()
-        self.conv1 = nn.Conv2d(1, 32, 3, 1)
+        self.conv1 = nn.Conv2d(3, 32, 3, 1)
         self.conv2 = nn.Conv2d(32, 64, 3, 1)
         self.dropout1 = nn.Dropout(0.25)
         self.dropout2 = nn.Dropout(0.5)
-        self.fc1 = nn.Linear(9216, 128)
+        self.fc1 = nn.Linear(64 * 8 * 8, 128)
         self.fc2 = nn.Linear(128, 10)
 
     def forward(self, x):
@@ -101,12 +101,12 @@ def train_and_evaluate(best_hyperparams):
 
     transform = transforms.Compose([
         transforms.ToTensor(),
-        transforms.Normalize((0.1307,), (0.3081,))
+        transforms.Normalize((0.4914, 0.4822, 0.4465), (0.247, 0.243, 0.261))
     ])
-    dataset1 = datasets.MNIST('../data', train=True, download=True,
-                       transform=transform)
-    dataset2 = datasets.MNIST('../data', train=False,
-                       transform=transform)
+
+    dataset1 = datasets.CIFAR10('../data', train=True, download=True, transform=transform)
+    dataset2 = datasets.CIFAR10('../data', train=False, transform=transform)
+
     train_loader = torch.utils.data.DataLoader(dataset1, **train_kwargs)
     test_loader = torch.utils.data.DataLoader(dataset2, **test_kwargs)
 
@@ -132,8 +132,16 @@ hyperparam_space = {
 
 def main():
     
-    best_hyperparams = optimize_hyperparameters(hyperparam_space, train_and_evaluate, ngen=3, pop_size=8)
-    print(best_hyperparams)
+    best_hyperparams = {
+        'learning_rate': 0.01,
+        'momentum': 0.9,
+        'epochs': 14,
+        #other parameters later
+    }
+    train_and_evaluate(best_hyperparams)
+    
+    #best_hyperparams = optimize_hyperparameters(hyperparam_space, train_and_evaluate, ngen=3, pop_size=8)
+    #print(best_hyperparams)
 
 if __name__ == '__main__':
     main()
