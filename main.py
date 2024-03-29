@@ -72,7 +72,7 @@ def train_and_evaluate(best_hyperparams):
         'test_batch_size': 1000,
         'epochs': best_hyperparams['epochs'],
         'lr': best_hyperparams['learning_rate'],
-        'gamma': 0.7,
+        'gamma': best_hyperparams['gamma'],
         'momentum': best_hyperparams['momentum']
     }
     
@@ -124,9 +124,10 @@ def train_and_evaluate(best_hyperparams):
     return performance 
 
 hyperparam_space = {
-    'learning_rate': (0.0001, 1),
+    'learning_rate': (0.0001, 0.1),
     'momentum': (0.0, 0.95),
     'epochs': (5, 20),
+    'gamma': (0.1, 0.9),
     #other parameters later
 }
 

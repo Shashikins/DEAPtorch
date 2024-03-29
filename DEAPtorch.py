@@ -13,7 +13,10 @@ def setup_toolbox(hyperparam_space):
     for hp_name, (hp_min, hp_max) in hyperparam_space.items():
         toolbox.register(f"attr_{hp_name}", random.uniform, hp_min, hp_max)
     def create_individual():
-        return [toolbox.__getattribute__(f"attr_{hp_name}")() for hp_name in hyperparam_space]
+        individual = [toolbox.__getattribute__(f"attr_{hp_name}")() for hp_name in hyperparam_space]
+        individual_named = {hp_name: value for hp_name, value in zip(hyperparam_space.keys(), individual)}
+        print(individual_named) 
+        return individual
     toolbox.register("individual", tools.initIterate, creator.Individual, create_individual)
     toolbox.register("population", tools.initRepeat, list, toolbox.individual)
     return toolbox
