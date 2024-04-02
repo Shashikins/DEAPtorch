@@ -43,7 +43,7 @@ def register_operators(toolbox, hyperparam_space):
     low_bounds, high_bounds = zip(*[(hp_details[0], hp_details[1]) for hp_details in hyperparam_space.values()])
     
     #mutation operator: choose based on hyperparameter type (float or int)
-    for hp_name, (hp_min, hp_max, _) in hyperparam_space.items():
+    for hp_name, (hp_min, hp_max) in hyperparam_space.items():
         #for ints
         if isinstance(hp_min, int) and isinstance(hp_max, int):
             toolbox.register(f"mutate_{hp_name}", tools.mutUniformInt, low=hp_min, up=hp_max, indpb=0.2)
