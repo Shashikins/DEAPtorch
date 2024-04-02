@@ -31,17 +31,62 @@ def checkBounds(hyperparam_space):
                 for i, name in enumerate(hyperparam_space):
                     min_val, max_val = hyperparam_space[name]
                     child[i] = max(min(child[i], max_val), min_val)
+                    #if it's supposed to be an int, round it
+                    if isinstance(min_val, int) and isinstance(max_val, int):
+                        child[i] = int(round(child[i]))
             return offspring
         return wrapper
     return decorator
+    
+def register_operators(toolbox, hyperparam_space, hyperparam_names):
+    #get bounds for each hyperparameter
+    low_bounds, high_bounds = zip(*[(hp_details[0], hp_details[1]) for hp_details in hyperparam_space.values()])
+    
+    #mutation operator: choose based on hyperparameter type (float or int)
+    for hp_name, (hp_min, hp_max, _) in hyperparam_space.items():
+        #for ints
+        if isinstance(hp_min, int) and isinstance(hp_max, int):
+            toolbox.register(f"mutate_{hp_name}", tools.mutUniformInt, low=hp_min, up=hp_max, indpb=0.2)
+        #for floats
+        else:
+            toolbox.register(f"mutate_{hp_name}", tools.mutPolynomialBounded, low=low_bounds, up=high_bounds, eta=1.0, indpb=0.2)
 
-def register_operators(toolbox, hyperparam_space):
-    toolbox.register("mate", tools.cxBlend, alpha=0.5)
-    low_bounds, high_bounds = zip(*[hyperparam_space[hp_name] for hp_name in hyperparam_space])
-    toolbox.register("mutate", tools.mutPolynomialBounded, low=low_bounds, up=high_bounds, eta=1.0, indpb=0.2)
-    # apply bounds check to all hyperparameters after crossover
+    def mutate(individual):
+        for i, name in enumerate(hyperparam_names):
+            if hasattr(toolbox, f"mutate_{name}"):
+                toolbox.__getattribute__(f"mutate_{name}")(individual)
+        return individual,
+
+    toolbox.register("mutate", mutate)
+
+    #works for both ints and floats
+    toolbox.register("mate", tools.cxOnePoint)
+
+    #apply bounds check to all hyperparameters after crossover and mutation
     toolbox.decorate("mate", checkBounds(hyperparam_space))
+    toolbox.decorate("mutate", checkBounds(hyperparam_space))
     toolbox.register("select", tools.selTournament, tournsize=3)
+
+    
+def register_operators(toolbox, hyperparam_space):
+    
+    # Determine which mutation function to use based on hyperparameter types
+    int_params = all(isinstance(min_val, int) and isinstance(max_val, int) for min_val, max_val in hyperparam_space.values())
+    if int_params:
+        toolbox.register("mutate", mutate_int, indpb=0.2)
+    else:
+        low_bounds, high_bounds = zip(*[hyperparam_space[hp_name] for hp_name in hyperparam_space])
+        toolbox.register("mutate", mutate_float, low=low_bounds, up=high_bounds, eta=1.0, indpb=0.2)
+
+    # Crossover operator: using cxOnePoint which is suitable for both types
+    toolbox.register("mate", tools.cxOnePoint)
+    
+    # Apply bounds check to all hyperparameters after crossover and mutation
+    toolbox.decorate("mate", checkBounds(hyperparam_space))
+    toolbox.decorate("mutate", checkBounds(hyperparam_space))
+    
+    toolbox.register("select", tools.selTournament, tournsize=3)
+
 
 def eval_individual(individual, eval_func, hyperparam_names):
     hyperparams = {name: val for name, val in zip(hyperparam_names, individual)}
