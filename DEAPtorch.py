@@ -67,27 +67,6 @@ def register_operators(toolbox, hyperparam_space, hyperparam_names):
     toolbox.decorate("mutate", checkBounds(hyperparam_space))
     toolbox.register("select", tools.selTournament, tournsize=3)
 
-    
-def register_operators(toolbox, hyperparam_space):
-    
-    # Determine which mutation function to use based on hyperparameter types
-    int_params = all(isinstance(min_val, int) and isinstance(max_val, int) for min_val, max_val in hyperparam_space.values())
-    if int_params:
-        toolbox.register("mutate", mutate_int, indpb=0.2)
-    else:
-        low_bounds, high_bounds = zip(*[hyperparam_space[hp_name] for hp_name in hyperparam_space])
-        toolbox.register("mutate", mutate_float, low=low_bounds, up=high_bounds, eta=1.0, indpb=0.2)
-
-    # Crossover operator: using cxOnePoint which is suitable for both types
-    toolbox.register("mate", tools.cxOnePoint)
-    
-    # Apply bounds check to all hyperparameters after crossover and mutation
-    toolbox.decorate("mate", checkBounds(hyperparam_space))
-    toolbox.decorate("mutate", checkBounds(hyperparam_space))
-    
-    toolbox.register("select", tools.selTournament, tournsize=3)
-
-
 def eval_individual(individual, eval_func, hyperparam_names):
     hyperparams = {name: val for name, val in zip(hyperparam_names, individual)}
     performance = eval_func(hyperparams)
