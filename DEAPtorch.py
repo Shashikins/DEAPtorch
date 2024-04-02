@@ -30,10 +30,11 @@ def checkBounds(hyperparam_space):
             for child in offspring:
                 for i, name in enumerate(hyperparam_space):
                     min_val, max_val = hyperparam_space[name]
-                    child[i] = max(min(child[i], max_val), min_val)
                     #if it's supposed to be an int, round it
                     if isinstance(min_val, int) and isinstance(max_val, int):
                         child[i] = int(round(child[i]))
+                    #keep the value in the bounds
+                    child[i] = max(min(child[i], max_val), min_val)
             return offspring
         return wrapper
     return decorator
