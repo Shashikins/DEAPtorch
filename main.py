@@ -102,7 +102,7 @@ def train_and_evaluate(best_hyperparams):
     test_loader = torch.utils.data.DataLoader(dataset2, **test_kwargs)
 
     model = Net().to(device)
-    optimizer = optim.SGD(model.parameters(), lr=best_hyperparams['lr'], momentum=best_hyperparams['momentum'])
+    optimizer = optim.SGD(model.parameters(), lr=best_hyperparams['learning_rate'], momentum=best_hyperparams['momentum'])
 
     scheduler = StepLR(optimizer, step_size=1, gamma=best_hyperparams['gamma'])
 
