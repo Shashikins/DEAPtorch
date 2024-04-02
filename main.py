@@ -67,15 +67,6 @@ def test(model, device, test_loader):
 
 def train_and_evaluate(best_hyperparams):
     
-    hyperparams = {
-        'batch_size': 64,
-        'test_batch_size': 1000,
-        'epochs': best_hyperparams['epochs'],
-        'lr': best_hyperparams['learning_rate'],
-        'gamma': best_hyperparams['gamma'],
-        'momentum': best_hyperparams['momentum']
-    }
-    
     use_cuda = torch.cuda.is_available()
     use_mps = torch.backends.mps.is_available()
     
@@ -90,8 +81,8 @@ def train_and_evaluate(best_hyperparams):
         
     print(device)
 
-    train_kwargs = {'batch_size': hyperparams['batch_size']}
-    test_kwargs = {'batch_size': hyperparams['test_batch_size']}
+    train_kwargs = {'batch_size': best_hyperparams['batch_size']}
+    test_kwargs = {'batch_size': best_hyperparams['test_batch_size']}
     if use_cuda:
         cuda_kwargs = {'num_workers': 1,
                        'pin_memory': True,
@@ -111,12 +102,12 @@ def train_and_evaluate(best_hyperparams):
     test_loader = torch.utils.data.DataLoader(dataset2, **test_kwargs)
 
     model = Net().to(device)
-    optimizer = optim.SGD(model.parameters(), lr=hyperparams['lr'], momentum=hyperparams['momentum'])
+    optimizer = optim.SGD(model.parameters(), lr=best_hyperparams['lr'], momentum=best_hyperparams['momentum'])
 
-    scheduler = StepLR(optimizer, step_size=1, gamma=hyperparams['gamma'])
+    scheduler = StepLR(optimizer, step_size=1, gamma=best_hyperparams['gamma'])
 
     import math
-    for epoch in range(1, math.floor(hyperparams['epochs']) + 1): #TODO
+    for epoch in range(1, best_hyperparams['epochs'] + 1): #TODO
         train(model, device, train_loader, optimizer, epoch)  #add log_interval here if different from 10
         performance = test(model, device, test_loader)
         scheduler.step()
@@ -128,7 +119,8 @@ hyperparam_space = {
     'momentum': (0.0, 0.95),
     'epochs': (5, 20),
     'gamma': (0.1, 0.9),
-    #other parameters later
+    'batch_size': (50, 100),
+    'test_batch_size': (500, 2000),
 }
 
 def main():

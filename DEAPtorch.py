@@ -11,11 +11,13 @@ def setup_creator():
 def setup_toolbox(hyperparam_space):
     toolbox = base.Toolbox()
     for hp_name, (hp_min, hp_max) in hyperparam_space.items():
-        toolbox.register(f"attr_{hp_name}", random.uniform, hp_min, hp_max)
+        #check on whether the bounds are floats or ints
+        if isinstance(hp_min, int) and isinstance(hp_max, int):
+            toolbox.register(f"attr_{hp_name}", random.randint, hp_min, hp_max)
+        else:
+            toolbox.register(f"attr_{hp_name}", random.uniform, hp_min, hp_max)
     def create_individual():
         individual = [toolbox.__getattribute__(f"attr_{hp_name}")() for hp_name in hyperparam_space]
-        individual_named = {hp_name: value for hp_name, value in zip(hyperparam_space.keys(), individual)}
-        print(individual_named) 
         return individual
     toolbox.register("individual", tools.initIterate, creator.Individual, create_individual)
     toolbox.register("population", tools.initRepeat, list, toolbox.individual)
@@ -37,7 +39,7 @@ def register_operators(toolbox, hyperparam_space):
     toolbox.register("mate", tools.cxBlend, alpha=0.5)
     low_bounds, high_bounds = zip(*[hyperparam_space[hp_name] for hp_name in hyperparam_space])
     toolbox.register("mutate", tools.mutPolynomialBounded, low=low_bounds, up=high_bounds, eta=1.0, indpb=0.2)
-    #apply bounds check to all hyperparameters after crossover
+    # apply bounds check to all hyperparameters after crossover
     toolbox.decorate("mate", checkBounds(hyperparam_space))
     toolbox.register("select", tools.selTournament, tournsize=3)
 
@@ -82,4 +84,4 @@ def optimize_hyperparameters(hyperparam_space, eval_func, ngen=5, pop_size=10):
     with open("logbook.pkl", "wb") as lb_file:
         pickle.dump(logbook, lb_file)
     
-    return best_hyperparams  # Best learning rate
+    return best_hyperparams
