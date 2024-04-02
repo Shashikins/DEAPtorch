@@ -38,7 +38,7 @@ def checkBounds(hyperparam_space):
         return wrapper
     return decorator
     
-def register_operators(toolbox, hyperparam_space, hyperparam_names):
+def register_operators(toolbox, hyperparam_space):
     #get bounds for each hyperparameter
     low_bounds, high_bounds = zip(*[(hp_details[0], hp_details[1]) for hp_details in hyperparam_space.values()])
     
@@ -52,7 +52,7 @@ def register_operators(toolbox, hyperparam_space, hyperparam_names):
             toolbox.register(f"mutate_{hp_name}", tools.mutPolynomialBounded, low=low_bounds, up=high_bounds, eta=1.0, indpb=0.2)
 
     def mutate(individual):
-        for i, name in enumerate(hyperparam_names):
+        for i, name in enumerate(hyperparam_space.items()):
             if hasattr(toolbox, f"mutate_{name}"):
                 toolbox.__getattribute__(f"mutate_{name}")(individual)
         return individual,
