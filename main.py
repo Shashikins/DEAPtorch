@@ -6,6 +6,8 @@ from torchvision import datasets, transforms
 from torch.optim.lr_scheduler import StepLR
 
 from DEAPtorch import optimize_hyperparameters
+import math
+import time
 
 class Net(nn.Module):
     def __init__(self):
@@ -81,8 +83,8 @@ def train_and_evaluate(best_hyperparams):
         
     print(device)
 
-    train_kwargs = {'batch_size': best_hyperparams['batch_size']}
-    test_kwargs = {'batch_size': best_hyperparams['test_batch_size']}
+    train_kwargs = {'batch_size': 50} #best_hyperparams['batch_size']
+    test_kwargs = {'batch_size': 1000} #best_hyperparams['test_batch_size']
     if use_cuda:
         cuda_kwargs = {'num_workers': 1,
                        'pin_memory': True,
@@ -106,8 +108,8 @@ def train_and_evaluate(best_hyperparams):
 
     scheduler = StepLR(optimizer, step_size=1, gamma=best_hyperparams['gamma'])
 
-    import math
-    for epoch in range(1, best_hyperparams['epochs'] + 1): #TODO
+    #for epoch in range(1, best_hyperparams['epochs'] + 1):
+    for epoch in range(1, 14 + 1): #TODO
         train(model, device, train_loader, optimizer, epoch)  #add log_interval here if different from 10
         performance = test(model, device, test_loader)
         scheduler.step()
@@ -117,10 +119,10 @@ def train_and_evaluate(best_hyperparams):
 hyperparam_space = {
     'learning_rate': (0.0001, 0.1),
     'momentum': (0.0, 0.95),
-    'epochs': (5, 20),
+    #'epochs': (5, 20),
     'gamma': (0.1, 0.9),
-    'batch_size': (50, 100),
-    'test_batch_size': (500, 2000),
+    #'batch_size': (50, 100),
+    #'test_batch_size': (500, 2000),
 }
 
 def main():
@@ -133,7 +135,13 @@ def main():
     #}
     #train_and_evaluate(best_hyperparams)
     
+    start_time = time.time()
+
     best_hyperparams = optimize_hyperparameters(hyperparam_space, train_and_evaluate, ngen=5, pop_size=10)
+    
+    end_time = time.time()
+    elapsed_time = end_time - start_time
+    print(f"Execution took: {elapsed_time} seconds")
     print(best_hyperparams)
 
 if __name__ == '__main__':
