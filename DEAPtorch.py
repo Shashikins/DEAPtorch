@@ -73,10 +73,11 @@ def register_operators(toolbox, hyperparam_space):
     toolbox.decorate("mutate", checkBounds(hyperparam_space))
     toolbox.register("select", tools.selTournament, tournsize=3)
     
-def eval_individual_with_gpu(individual, eval_func, hyperparam_names, gpu_index):
+def eval_individual_with_gpu(individual, eval_func, hyperparam_names, num_processes):
+    index = os.getpid() % num_processes
     hyperparams = {name: val for name, val in zip(hyperparam_names, individual)}
     #set CUDA_VISIBLE_DEVICES to the specified GPU index
-    os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_index)
+    os.environ["CUDA_VISIBLE_DEVICES"] = str(index)
     performance = eval_func(hyperparams)
     return performance
 
@@ -96,16 +97,22 @@ def optimize_hyperparameters(hyperparam_space, eval_func, ngen=5, pop_size=10):
     Returns:
     - A dictionary with optimized hyperparameters.
     """
-    num_gpus = torch.cuda.device_count()
-    print(f"Found {num_gpus} GPUs.")
-    pool = multiprocessing.Pool(processes=num_gpus)
+    if torch.cuda.is_available():
+        num_gpus = torch.cuda.device_count()
+        print(f"Found {num_gpus} GPUs.")
+        num_processes = num_gpus
+    else:
+        num_processes = multiprocessing.cpu_count()  # Fallback to CPU
+        print(f"No GPUs found. Using CPU with {num_processes} processes.")
+ 
+    pool = multiprocessing.Pool(processes=num_processes)
     
     hyperparam_names = list(hyperparam_space.keys())
     
     setup_creator()
     toolbox = setup_toolbox(hyperparam_space)
     register_operators(toolbox, hyperparam_space)
-    toolbox.register("evaluate", eval_individual, eval_func=eval_func, hyperparam_names=hyperparam_names)
+    toolbox.register("evaluate", eval_individual_with_gpu, eval_func=eval_func, hyperparam_names=hyperparam_names, num_processes=num_processes)
     
     pop = toolbox.population(n=pop_size)
     hof = tools.HallOfFame(1)
@@ -115,45 +122,66 @@ def optimize_hyperparameters(hyperparam_space, eval_func, ngen=5, pop_size=10):
     stats.register("min", numpy.min)
     stats.register("max", numpy.max)
     
-    _, logbook = algorithms.eaSimple(pop, toolbox, cxpb=0.5, mutpb=0.2, ngen=ngen, stats=stats, halloffame=hof, verbose=True)
-    for gen in range(ngen):
+    # Based on eaSimple from https://github.com/DEAP/deap/blob/master/deap/algorithms.py, but with parallelization added
+    
+    #_, logbook = algorithms.eaSimple(pop, toolbox, cxpb=0.5, mutpb=0.2, ngen=ngen, stats=stats, halloffame=hof, verbose=True)
+    logbook = tools.Logbook()
+    logbook.header = ['gen', 'nevals'] + (stats.fields if stats else [])
+    
+    # Evaluate the individuals with an invalid fitness
+    invalid_ind = [ind for ind in pop if not ind.fitness.valid]
+    fitnesses = pool.map(toolbox.evaluate, invalid_ind)
+    for ind, fit in zip(invalid_ind, fitnesses):
+        ind.fitness.values = fit
+    
+    if hof is not None:
+        hof.update(pop)
+
+    record = stats.compile(pop) if stats else {}
+    logbook.record(gen=0, nevals=len(invalid_ind), **record)
+    
+        # Begin the generational process
+    for gen in range(1, ngen + 1):
+        ##
         eval_jobs = []
         for ind in pop:
-            #ssign each evaluation task to a different GPU process
-            eval_jobs.append(pool.apply_async(eval_individual_with_gpu, (ind, eval_func, hyperparam_names, len(eval_jobs) % num_gpus)))
+            # Assign each evaluation task to a different GPU process
+            eval_jobs.append(pool.apply_async(eval_individual_with_gpu, (ind, eval_func, hyperparam_names, len(eval_jobs) % num_processes)))
 
         for job in eval_jobs:
             job.wait()
 
-        #get the results from the evaluation jobs
+        # Get the results from the evaluation jobs
         fitnesses = [job.get() for job in eval_jobs]
 
-        #update individual fitness values
+        # Update individual fitness values
         for ind, fit in zip(pop, fitnesses):
             ind.fitness.values = fit
-
-        #update Hall of Fame
-        hof.update(pop)
-
-        #select the next generation individuals
-        pop = toolbox.select(pop, k=len(pop))
+        ##
+            
+        # Select the next generation of individuals
+        offspring = toolbox.select(pop, len(pop))
 
         # Vary the pool of individuals
-        offspring = algorithms.varAnd(pop, toolbox, cxpb=0.5, mutpb=0.2)
+        offspring = algorithms.varAnd(offspring, toolbox, cxpb=0.5, mutpb=0.2)
 
-        #evaluate the individuals with an invalid fitness
+        # Evaluate the individuals with an invalid fitness
         invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
-        evals = toolbox.map(toolbox.evaluate, invalid_ind)
-        for ind, fit in zip(invalid_ind, evals):
+        fitnesses = pool.map(toolbox.evaluate, invalid_ind)
+        for ind, fit in zip(invalid_ind, fitnesses):
             ind.fitness.values = fit
 
-        #update the population
+        # Update the hall of fame with the generated individuals
+        if hof is not None:
+            hof.update(offspring)
+
+        # Replace the current population by the offspring
         pop[:] = offspring
 
-        #record statistics
-        record = stats.compile(pop)
-        logbook.record(gen=gen, **record)
-        
+        # Append the current generation statistics to the logbook
+        record = stats.compile(pop) if stats else {}
+        logbook.record(gen=gen, nevals=len(invalid_ind), **record)
+    
     best_hyperparams = {name: val for name, val in zip(hyperparam_names, hof[0])}
     
     print(best_hyperparams)
