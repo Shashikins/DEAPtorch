@@ -3,6 +3,11 @@ import random
 import numpy
 import matplotlib.pyplot as plt
 import pickle
+import multiprocessing
+import os
+import torch
+
+
 
 def setup_creator():
     creator.create("FitnessMax", base.Fitness, weights=(1.0,))
@@ -67,6 +72,13 @@ def register_operators(toolbox, hyperparam_space):
     toolbox.decorate("mate", checkBounds(hyperparam_space))
     toolbox.decorate("mutate", checkBounds(hyperparam_space))
     toolbox.register("select", tools.selTournament, tournsize=3)
+    
+def eval_individual_with_gpu(individual, eval_func, hyperparam_names, gpu_index):
+    hyperparams = {name: val for name, val in zip(hyperparam_names, individual)}
+    #set CUDA_VISIBLE_DEVICES to the specified GPU index
+    os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_index)
+    performance = eval_func(hyperparams)
+    return performance
 
 def eval_individual(individual, eval_func, hyperparam_names):
     hyperparams = {name: val for name, val in zip(hyperparam_names, individual)}
@@ -84,6 +96,10 @@ def optimize_hyperparameters(hyperparam_space, eval_func, ngen=5, pop_size=10):
     Returns:
     - A dictionary with optimized hyperparameters.
     """
+    num_gpus = torch.cuda.device_count()
+    print(f"Found {num_gpus} GPUs.")
+    pool = multiprocessing.Pool(processes=num_gpus)
+    
     hyperparam_names = list(hyperparam_space.keys())
     
     setup_creator()
@@ -100,7 +116,44 @@ def optimize_hyperparameters(hyperparam_space, eval_func, ngen=5, pop_size=10):
     stats.register("max", numpy.max)
     
     _, logbook = algorithms.eaSimple(pop, toolbox, cxpb=0.5, mutpb=0.2, ngen=ngen, stats=stats, halloffame=hof, verbose=True)
-    
+    for gen in range(ngen):
+        eval_jobs = []
+        for ind in pop:
+            #ssign each evaluation task to a different GPU process
+            eval_jobs.append(pool.apply_async(eval_individual_with_gpu, (ind, eval_func, hyperparam_names, len(eval_jobs) % num_gpus)))
+
+        for job in eval_jobs:
+            job.wait()
+
+        #get the results from the evaluation jobs
+        fitnesses = [job.get() for job in eval_jobs]
+
+        #update individual fitness values
+        for ind, fit in zip(pop, fitnesses):
+            ind.fitness.values = fit
+
+        #update Hall of Fame
+        hof.update(pop)
+
+        #select the next generation individuals
+        pop = toolbox.select(pop, k=len(pop))
+
+        # Vary the pool of individuals
+        offspring = algorithms.varAnd(pop, toolbox, cxpb=0.5, mutpb=0.2)
+
+        #evaluate the individuals with an invalid fitness
+        invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
+        evals = toolbox.map(toolbox.evaluate, invalid_ind)
+        for ind, fit in zip(invalid_ind, evals):
+            ind.fitness.values = fit
+
+        #update the population
+        pop[:] = offspring
+
+        #record statistics
+        record = stats.compile(pop)
+        logbook.record(gen=gen, **record)
+        
     best_hyperparams = {name: val for name, val in zip(hyperparam_names, hof[0])}
     
     print(best_hyperparams)
