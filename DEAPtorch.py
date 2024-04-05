@@ -73,18 +73,13 @@ def register_operators(toolbox, hyperparam_space):
     toolbox.decorate("mutate", checkBounds(hyperparam_space))
     toolbox.register("select", tools.selTournament, tournsize=3)
     
-def eval_individual_with_gpu(individual, eval_func, hyperparam_names, num_processes):
-    index = os.getpid() % num_gpus if num_gpus > 0 else 0
-    hyperparams = {name: val for name, val in zip(hyperparam_names, individual)}
-    #set CUDA_VISIBLE_DEVICES to the specified GPU index
-    os.environ["CUDA_VISIBLE_DEVICES"] = str(index)
-    performance = eval_func(hyperparams)
-    return performance
-
 def eval_individual(individual, eval_func, hyperparam_names):
     hyperparams = {name: val for name, val in zip(hyperparam_names, individual)}
     performance = eval_func(hyperparams)
     return performance
+
+def init_worker(index):
+    os.environ["CUDA_VISIBLE_DEVICES"] = str(index)
 
 def optimize_hyperparameters(hyperparam_space, eval_func, ngen=5, pop_size=10):
     """
@@ -97,25 +92,25 @@ def optimize_hyperparameters(hyperparam_space, eval_func, ngen=5, pop_size=10):
     Returns:
     - A dictionary with optimized hyperparameters.
     """
-    if __name__ == '__main__':
-        multiprocessing.set_start_method('spawn', force=True)
+    multiprocessing.set_start_method('spawn', force=True)
     
     if torch.cuda.is_available():
         num_gpus = torch.cuda.device_count()
         print(f"Found {num_gpus} GPUs.")
         num_processes = num_gpus
     else:
-        num_processes = multiprocessing.cpu_count()  # Fallback to CPU
-        print(f"No GPUs found. Using CPU with {num_processes} processes.")
+        num_processes = 1  # Fallback to CPU
+        print(f"No GPUs found. Using CPU.")
  
     pool = multiprocessing.Pool(processes=num_processes)
+    pool.map(init_worker, range(num_processes))
     
     hyperparam_names = list(hyperparam_space.keys())
     
     setup_creator()
     toolbox = setup_toolbox(hyperparam_space)
     register_operators(toolbox, hyperparam_space)
-    toolbox.register("evaluate", eval_individual_with_gpu, eval_func=eval_func, hyperparam_names=hyperparam_names, num_processes=num_processes)
+    toolbox.register("evaluate", eval_individual, eval_func=eval_func, hyperparam_names=hyperparam_names)
     
     pop = toolbox.population(n=pop_size)
     hof = tools.HallOfFame(1)
@@ -149,7 +144,7 @@ def optimize_hyperparameters(hyperparam_space, eval_func, ngen=5, pop_size=10):
         eval_jobs = []
         for ind in pop:
             # Assign each evaluation task to a different GPU process
-            eval_jobs.append(pool.apply_async(eval_individual_with_gpu, (ind, eval_func, hyperparam_names, len(eval_jobs) % num_processes)))
+            eval_jobs.append(pool.apply_async(toolbox.evaluate, (ind,)))
 
         for job in eval_jobs:
             job.wait()
