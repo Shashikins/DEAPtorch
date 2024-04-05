@@ -81,13 +81,15 @@ def eval_individual(individual, eval_func, hyperparam_names):
 def init_worker(index):
     os.environ["CUDA_VISIBLE_DEVICES"] = str(index)
 
-def optimize_hyperparameters(hyperparam_space, eval_func, ngen=5, pop_size=10):
+def optimize_hyperparameters(hyperparam_space, eval_func, ngen=5, pop_size=10, parallelize=True, processes: int = None):
     """
     Processes the hyperparameters in the given dictionary. 
 
     Parameters:
     - hyperparam_space: A dictionary of hyperparameters.
-    - train_and_evaluate A function that trains the model with the hyperparameters, and returns accuracy as a tuple.
+    - eval_func A function that trains the model with the hyperparameters, and returns accuracy as a tuple.
+    - parallelize: A boolean that defines whether the user wishes to parallelize or not
+    - processes: Optional, if the user wishes to specify a number of processes instead of the default
 
     Returns:
     - A dictionary with optimized hyperparameters.
@@ -95,12 +97,17 @@ def optimize_hyperparameters(hyperparam_space, eval_func, ngen=5, pop_size=10):
     multiprocessing.set_start_method('spawn', force=True)
     
     if torch.cuda.is_available():
-        num_gpus = torch.cuda.device_count()
-        print(f"Found {num_gpus} GPUs.")
-        num_processes = num_gpus
+        if parallelize
+            num_processes = torch.cuda.device_count()
+            print(f"Found {num_processes} GPUs.")
+        else
+            num_processes = 1
     else:
         num_processes = 1  # Fallback to CPU
         print(f"No GPUs found. Using CPU.")
+    
+    if parallelize and processes is not None:
+        num_processes = processes
  
     pool = multiprocessing.Pool(processes=num_processes)
     pool.map(init_worker, range(num_processes))
@@ -140,7 +147,7 @@ def optimize_hyperparameters(hyperparam_space, eval_func, ngen=5, pop_size=10):
     
         # Begin the generational process
     for gen in range(1, ngen + 1):
-        ##
+        
         eval_jobs = []
         for ind in pop:
             # Assign each evaluation task to a different GPU process
@@ -155,7 +162,6 @@ def optimize_hyperparameters(hyperparam_space, eval_func, ngen=5, pop_size=10):
         # Update individual fitness values
         for ind, fit in zip(pop, fitnesses):
             ind.fitness.values = fit
-        ##
             
         # Select the next generation of individuals
         offspring = toolbox.select(pop, len(pop))
