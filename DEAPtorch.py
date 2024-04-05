@@ -91,7 +91,10 @@ class NoDaemonProcess(multiprocessing.Process):
     daemon = property(_get_daemon, _set_daemon)
     
 class NewPool(multiprocessing.pool.Pool):
-    Process = NoDaemonProcess
+    
+    @staticmethod
+    def Process(ctx, *args, **kwargs):
+        return NoDaemonProcess(*args, **kwargs)
 
 def optimize_hyperparameters(hyperparam_space, eval_func, ngen=5, pop_size=10, parallelize=True, processes: int = None):
     """
@@ -109,13 +112,13 @@ def optimize_hyperparameters(hyperparam_space, eval_func, ngen=5, pop_size=10, p
     multiprocessing.set_start_method('spawn', force=True)
     
     if torch.cuda.is_available():
-        if parallelize
+        if parallelize:
             num_processes = torch.cuda.device_count()
             print(f"Found {num_processes} GPUs.")
-        else
+        else:
             num_processes = 1
     else:
-        num_processes = 1  # Fallback to CPU
+        num_processes = 1  # Fallback to CPU, don't parallelize CPU because PyTorch already uses OpenMP (if they want to override this and parallelize it anyway, they can specify the number of processes when calling the function)
         print(f"No GPUs found. Using CPU.")
     
     if parallelize and processes is not None:
@@ -141,7 +144,6 @@ def optimize_hyperparameters(hyperparam_space, eval_func, ngen=5, pop_size=10, p
     
     # Based on eaSimple from https://github.com/DEAP/deap/blob/master/deap/algorithms.py, but with parallelization added
     
-    #_, logbook = algorithms.eaSimple(pop, toolbox, cxpb=0.5, mutpb=0.2, ngen=ngen, stats=stats, halloffame=hof, verbose=True)
     logbook = tools.Logbook()
     logbook.header = ['gen', 'nevals'] + (stats.fields if stats else [])
     
