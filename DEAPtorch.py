@@ -4,6 +4,7 @@ import numpy
 import matplotlib.pyplot as plt
 import pickle
 import multiprocessing
+import multiprocessing.pool
 import os
 import torch
 
@@ -80,6 +81,17 @@ def eval_individual(individual, eval_func, hyperparam_names):
 
 def init_worker(index):
     os.environ["CUDA_VISIBLE_DEVICES"] = str(index)
+    
+# to avoid errors because PyTorch also uses multiprocessing
+class NoDaemonProcess(multiprocessing.Process):
+    def _get_daemon(self):
+        return False
+    def _set_daemon(self, value):
+        pass
+    daemon = property(_get_daemon, _set_daemon)
+    
+class NewPool(multiprocessing.pool.Pool):
+    Process = NoDaemonProcess
 
 def optimize_hyperparameters(hyperparam_space, eval_func, ngen=5, pop_size=10, parallelize=True, processes: int = None):
     """
@@ -109,7 +121,7 @@ def optimize_hyperparameters(hyperparam_space, eval_func, ngen=5, pop_size=10, p
     if parallelize and processes is not None:
         num_processes = processes
  
-    pool = multiprocessing.Pool(processes=num_processes)
+    pool = NewPool(processes=num_processes)
     pool.map(init_worker, range(num_processes))
     
     hyperparam_names = list(hyperparam_space.keys())
