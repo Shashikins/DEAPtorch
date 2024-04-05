@@ -74,7 +74,7 @@ def register_operators(toolbox, hyperparam_space):
     toolbox.register("select", tools.selTournament, tournsize=3)
     
 def eval_individual_with_gpu(individual, eval_func, hyperparam_names, num_processes):
-    index = os.getpid() % num_processes
+    index = os.getpid() % num_gpus if num_gpus > 0 else 0
     hyperparams = {name: val for name, val in zip(hyperparam_names, individual)}
     #set CUDA_VISIBLE_DEVICES to the specified GPU index
     os.environ["CUDA_VISIBLE_DEVICES"] = str(index)
@@ -97,6 +97,9 @@ def optimize_hyperparameters(hyperparam_space, eval_func, ngen=5, pop_size=10):
     Returns:
     - A dictionary with optimized hyperparameters.
     """
+    if __name__ == '__main__':
+        multiprocessing.set_start_method('spawn', force=True)
+    
     if torch.cuda.is_available():
         num_gpus = torch.cuda.device_count()
         print(f"Found {num_gpus} GPUs.")
