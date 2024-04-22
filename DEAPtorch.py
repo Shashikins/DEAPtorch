@@ -161,21 +161,6 @@ def optimize_hyperparameters(hyperparam_space, eval_func, ngen=5, pop_size=10, p
     
         # Begin the generational process
     for gen in range(1, ngen + 1):
-        
-        eval_jobs = []
-        for ind in pop:
-            # Assign each evaluation task to a different GPU process
-            eval_jobs.append(pool.apply_async(toolbox.evaluate, (ind,)))
-
-        for job in eval_jobs:
-            job.wait()
-
-        # Get the results from the evaluation jobs
-        fitnesses = [job.get() for job in eval_jobs]
-
-        # Update individual fitness values
-        for ind, fit in zip(pop, fitnesses):
-            ind.fitness.values = fit
             
         # Select the next generation of individuals
         offspring = toolbox.select(pop, len(pop))
