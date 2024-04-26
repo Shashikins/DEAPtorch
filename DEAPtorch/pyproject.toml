@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "deaptorch"
+version = "0.1.0"
+description = "A library for automatizing hyperparameter creation using DEAP"
+authors = ["Rinsai Rossetti <rinsai.rossetti@cy-tech.fr>"]
+license = "GNU Lesser General Public License v3.0"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+deap = "^1.4.1"
+torch = "^2.2.2"
+numpy = "^1.26.4"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
