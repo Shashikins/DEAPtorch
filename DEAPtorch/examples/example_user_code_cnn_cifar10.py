@@ -7,10 +7,12 @@ import torch.optim as optim
 from torchvision import datasets, transforms
 from torch.optim.lr_scheduler import StepLR
 
+# import from DEAPtorch
 from deaptorch import optimize_hyperparameters
 import math
 import time
 
+# Define the neural network model
 class Net(nn.Module):
     def __init__(self):
         super(Net, self).__init__()
@@ -21,6 +23,7 @@ class Net(nn.Module):
         self.fc1 = nn.Linear(64 * 14 * 14, 128)
         self.fc2 = nn.Linear(128, 10)
 
+    # Forward pass through the network
     def forward(self, x):
         x = self.conv1(x)
         x = F.relu(x)
@@ -36,6 +39,7 @@ class Net(nn.Module):
         output = F.log_softmax(x, dim=1)
         return output
 
+# Training function for the model
 def train(model, device, train_loader, optimizer, epoch, log_interval=10):
     model.train()
     for batch_idx, (data, target) in enumerate(train_loader):
@@ -50,7 +54,7 @@ def train(model, device, train_loader, optimizer, epoch, log_interval=10):
                 epoch, batch_idx * len(data), len(train_loader.dataset),
                 100. * batch_idx / len(train_loader), loss.item()))
 
-
+# Testing function for the model
 def test(model, device, test_loader):
     model.eval()
     test_loss = 0
@@ -69,13 +73,16 @@ def test(model, device, test_loader):
     accuracy = 100. * correct / len(test_loader.dataset)
     return (accuracy,) #must be a tuple
 
+# Set up callable function
 def train_and_evaluate(best_hyperparams):
     
     use_cuda = torch.cuda.is_available()
     use_mps = torch.backends.mps.is_available()
     
+    # set seed to 1
     torch.manual_seed(1)
 
+    # Set device based on CUDA availability
     if use_cuda:
         device = torch.device("cuda")
     elif use_mps:
@@ -85,8 +92,8 @@ def train_and_evaluate(best_hyperparams):
         
     print(device)
 
-    train_kwargs = {'batch_size': 50} #best_hyperparams['batch_size']
-    test_kwargs = {'batch_size': 1000} #best_hyperparams['test_batch_size']
+    train_kwargs = {'batch_size': best_hyperparams['batch_size']}
+    test_kwargs = {'batch_size': best_hyperparams['test_batch_size']} 
     if use_cuda:
         cuda_kwargs = {'num_workers': 1,
                        'pin_memory': True,
@@ -110,35 +117,30 @@ def train_and_evaluate(best_hyperparams):
 
     scheduler = StepLR(optimizer, step_size=1, gamma=best_hyperparams['gamma'])
 
-    #for epoch in range(1, best_hyperparams['epochs'] + 1):
-    for epoch in range(1, 14 + 1): #TODO
+    # Training and testing loop
+    for epoch in range(1, best_hyperparams['epochs'] + 1):
         train(model, device, train_loader, optimizer, epoch)  #add log_interval here if different from 10
         performance = test(model, device, test_loader)
         scheduler.step()
 
+    # Return single performance metric to maximize, in a tuple
     return performance 
 
+# Set up hyperparameters with ranges
 hyperparam_space = {
-    'learning_rate': (0.0001, 0.1),
+    'learning_rate': (0.0001, 0.1), # Range of floats
     'momentum': (0.0, 0.95),
-    #'epochs': (5, 20),
+    'epochs': (5, 20), # Range of ints
     'gamma': (0.1, 0.9),
-    #'batch_size': (50, 100),
-    #'test_batch_size': (500, 2000),
+    'batch_size': (50, 100),
+    'test_batch_size': (500, 2000),
 }
 
 def main():
     
-    #best_hyperparams = {
-        #'learning_rate': 0.034720160423101325,
-        #'momentum': 0.8035399974380517,
-        #'epochs': 14,
-        ##other parameters later
-    #}
-    #train_and_evaluate(best_hyperparams)
-    
     start_time = time.time()
 
+    # use DEAPtorch
     best_hyperparams = optimize_hyperparameters(hyperparam_space, train_and_evaluate, ngen=5, pop_size=10)
     
     end_time = time.time()
@@ -146,5 +148,6 @@ def main():
     print(f"Execution took: {elapsed_time} seconds")
     print(best_hyperparams)
 
+# Protect the entry point of the program
 if __name__ == '__main__':
     main()

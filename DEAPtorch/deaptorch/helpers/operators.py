@@ -66,7 +66,7 @@ def register_operators(toolbox, hyperparam_space):
 
     toolbox.register("mutate", mutate)
 
-    # Standard one-point crossover operator. Works for both ints and floats.
+    # One-point crossover operator. Works for both ints and floats.
     toolbox.register("mate", tools.cxOnePoint)
 
     # Make sure all genetic operators respect the hyperparameter bounds.
